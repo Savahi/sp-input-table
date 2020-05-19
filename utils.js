@@ -648,7 +648,10 @@ function padWithNChars( n, char ) {
 function spacesToPadNameAccordingToHierarchy( hierarchy ) {
 	let s = '';
 	for( let i = 0 ; i < hierarchy ; i++ ) {
-		s += '   '; // figure space: ' ', '·‧', '•', '⁌','|'
+		s += '&#8226;&nbsp;'; //'   '; // figure space: ' ', '·‧', '•', '⁌','|'
+	}
+	if( s.length > 0 ) {
+		s = "<span style='color:#7f7f7f; font-size:10px; font-weight:normal;'>" + s + "</span>";
 	}
 	return s;
 }
@@ -684,35 +687,10 @@ function printSVG() {
 	document.documentElement.style.setProperty('--header-height', '2px');
 	document.documentElement.style.setProperty('--toolbox-table-height', '2px');
 
-	let scrollThick = _settings.scrollThick;
-	_settings.scrollThick = 0;
-	_tableScrollSVG.setAttributeNS(null, 'height', 0 );
-	_ganttHScrollSVG.setAttributeNS(null, 'height', 0 );
-	_verticalScrollSVG.setAttributeNS(null, 'width', 0 );
-
-	initLayoutCoords();
-    drawTableHeader();
-    drawTableContent();
-    drawGantt();
-    drawTimeScale();
-	drawVerticalSplitter(true);
-
 	window.print(); 
 
-	_settings.scrollThick = scrollThick;
-	_tableScrollSVG.setAttributeNS(null, 'height', scrollThick );
-	_ganttHScrollSVG.setAttributeNS(null, 'height', scrollThick );
-	_verticalScrollSVG.setAttributeNS(null, 'width', scrollThick );
 	document.documentElement.style.setProperty('--header-height', headerHeight);
 	document.documentElement.style.setProperty('--toolbox-table-height', toolboxTableHeight);
-
-	initLayoutCoords();
-    drawTableHeader();
-    drawTableContent();
-    drawGantt();
-    drawTimeScale();
-	drawVerticalSplitter(true);
-
 
 	header.style.display = headerDisplayStyle;
 	toolbox.style.display = toolboxDisplayStyle;
@@ -891,6 +869,15 @@ function adjustDateTimeToFormat( dateTime, format ) {
 		if( pattern.test(dateTime) ) {  // ... if not ... 
 			dateTime += ' 00' + _timeDelim + '00';       // ... adding time.
 		}
+	}
+	return dateTime;
+}
+
+
+function adjustDateTimeToFullFormat( dateTime ) {
+	let pattern = new RegExp('^ *[0-9]{2}' + _dateDelim + '[0-9]{2}' + _dateDelim + '[0-9]{4} *$');
+	if( pattern.test(dateTime) ) {  // ... if not ... 
+		dateTime += ' 00' + _timeDelim + '00';       // ... adding time.
 	}
 	return dateTime;
 }

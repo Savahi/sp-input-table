@@ -1,7 +1,6 @@
 
 var NS = "http://www.w3.org/2000/svg";
 
-var _redrawAllMode=false;
 var _touchDevice = false;
 var _dateDMY=true;
 var _ganttMTime = -1;
@@ -67,10 +66,6 @@ function loadData() {
 			    	if( noOperations ) {
 						displayMessageBox( _texts[_lang].errorParsingData ); 
 						return;
-			    	}
-
-			    	if( _data.operations.length > 400 ) {
-			    		_redrawAllMode = true;
 			    	}
 
 			    	let noEditables=false; // To check if some data are editable or not...
@@ -287,6 +282,13 @@ function initData() {
 		_data.operations[i].visible = true;
 	}
 
+	// Creating ref-type array and attaching it to the "data"
+	_data.refSettings = {};
+	for( let col = 0 ; col < _data.table.length ; col++ ) {
+		let o = { column: col, type: _data.table[col].type, format: _data.table[col].format, name: _data.table[col].name };
+		_data.refSettings[ _data.table[col].ref ] = o;
+	}
+
 	// Handling table columns widths
 	for( let col = 0 ; col < _data.table.length ; col++ ) { // Recalculating widths in symbols into widths in points 
 		let add = _settings.tableColumnHMargin*2 + _settings.tableColumnTextMargin*2;
@@ -337,10 +339,12 @@ function initLayout() {
 
 	_containerDiv = document.getElementById("containerDiv");
 	
-	let htmlStyles = window.getComputedStyle(document.querySelector("html"));
-	let headerHeight = parseInt( htmlStyles.getPropertyValue('--header-height') );
-	let toolboxTableHeight = parseInt( htmlStyles.getPropertyValue('--toolbox-table-height') );
-	_containerDivHeight = window.innerHeight - headerHeight - toolboxTableHeight;
+	let headerDiv = document.getElementById('header');
+	let headerBox = headerDiv.getBoundingClientRect();
+	let headerHeight = headerBox.height;	
+	//let htmlStyles = window.getComputedStyle(document.querySelector("html"));
+	//let headerHeight = parseInt( htmlStyles.getPropertyValue('--header-height') );
+	_containerDivHeight = window.innerHeight - headerHeight;
 
 	_containerDiv.style.height = _containerDivHeight + "px";
 	_containerDiv.style.width = window.innerWidth + "px";
@@ -369,8 +373,8 @@ function displayHeaderAndFooterInfo() {
 		el.innerHTML = _userName + "<br/><span style='cursor:pointer;' onclick='logout();'>[&rarr;]</span>"; // ➜ ➡ ➝ ➲ ➠ ➞ ➩ ➯ →
 	}
 
-	document.getElementById('helpTitle').innerText = _texts[_lang].helpTitle; // Initializing help text	
-	document.getElementById('helpText').innerHTML = _texts[_lang].helpText; // Initializing help text	
+	//document.getElementById('helpTitle').innerText = _texts[_lang].helpTitle; // Initializing help text	
+	//document.getElementById('helpText').innerHTML = _texts[_lang].helpText; // Initializing help text	
 
 	document.getElementById('toolboxNewProjectDiv').title = _texts[_lang].titleNewProject;	
 	document.getElementById('toolboxNewProjectIcon').setAttribute('src',_iconNewProject);
