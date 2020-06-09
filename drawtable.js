@@ -16,7 +16,7 @@ function drawTableHeader() {
 		left += _data.table[col].width;
 		let props = { 'fill':_settings.tableHeaderFillColor, 'stroke':_settings.tableHeaderBorderColor, 'strokeWidth':1 };
 		let title = _data.table[col].name;
-		if( isEditable( _data.table[col].ref ) ) {
+		if( _data.refSettings[ _data.table[col].ref ].editableType !== null ) {
 			title += "*";
 		}
 		let td = document.createElement('td');
@@ -98,85 +98,20 @@ function drawTableContent( init=false, shiftOnly=false ) {
 
 		for( let col = 1 ; col < _data.table.length ; col++ ) {
 			let td = document.createElement('td');
-			tr.appendChild(td);
 			td.id = 'tableColumn'+col+'Row'+i; 
+			tr.appendChild(td);
 
-			let ref = _data.table[col].ref;
-			let content = _data.operations[i][ref];
-			let editedByUser = false;
-			let color = _data.operations[i].colorFont; // _settings.tableContentStrokeColor;
-			let fontStyle = 'normal';
-			let fontWeight = 'normal';
-			let backgroundColor = _data.operations[i].colorBack;
-			let textAlign = 'left';
-			if( 'userData' in _data.operations[i] ) { // If the value has been changed by user and not saved
-				if( ref in _data.operations[i].userData ) {
-					if( _data.operations[i].userData[ref] != content ) {
-						content = _data.operations[i].userData[ref];
-						fontStyle = "italic";
-						fontWeight = "bold";
-						editedByUser = true;
-					}
-				}
-			}
-			if( typeof(content) === 'undefined' ) {
-				content = '';
-			} else if( content === null ) {
-				content = '';
-			}
+			let tdTextNode = document.createElement('span');	// To store value
+			td.appendChild( tdTextNode );
 
-			if( ref === "Level" ) { // To display no 'teams' or 'assignments' (phases only). 
-				if( typeof(content) === 'string' ) {
-					content = "";
-				}
-			}
-
-			if( ref === 'Name' ) { // A name should be adjusted according to it position in the hierarchy
-				content = spacesToPadNameAccordingToHierarchy(_data.operations[i].parents.length) + content; 
-				if( typeof(_data.operations[i].Level) === 'number' ) { // If it is a phase...
-					fontWeight = 'bold'; // ... making it bold.
-				}
-			} else {
-				if( _data.table[col].type === 'float' || _data.table[col].type === 'int' ) {
-					if( _data.table[col].type === 'float' ) {
-						value = parseFloat( content );
-						if( !isNaN(value) ) {
-							content = value.toFixed( _data.table[col].format ); // For float values "format" stands for the radix.
-						}
-					}							
-					textAlign = 'right';
-				} else if( _data.table[col].type === 'string' || _data.table[col].type === 'text' ) { // For strings "format" stands for alignment
-					if( _data.table[col].format == 1 ) { // Align right
-						textAlign = 'right';							
-					} else if ( _data.table[col].format == 2 ) {
-						textAlign = 'center';														
-					}
-				} else if( _data.table[col].type === 'datetime' ) {
-					content = adjustDateTimeToFormat( content, _data.table[col].format );
-				} else if( _data.table[col].type === 'signal' ) { // Signals require being 'centered'
-					color = _settings.tableContentStrokeColor;						
-				}
-			}
-			if( _data.table[col].type !== 'signal' ) {
-				td.innerHTML = content;
-			} else {
-				td.innerHTML = 	'&#9679';
-			}
-			td.style.color = _data.operations[i].colorFont; // _settings.tableContentStrokeColor;
-			td.style.fontStyle = fontStyle;
-			td.style.fontWeight = fontWeight;
-			//td.style.backgroundColor = backgroundColor;
-			td.style.textAlign = textAlign;
-
-			let editableType = isEditable(_data.table[col].ref); // To confirm the field is editable...
 			// If it is editable and it is neither team nor assignment...
-			if( editableType != null ) {
+			if( _data.refSettings[_data.table[col].ref].editableType !== null ) {
 				if( (typeof(_data.operations[i].Level) === 'string') || (_data.operations[i].Level === null) ) {
 					td.className = 'dataTableEditable';
 					td.style.borderBottom = '1px solid #bfbfbf';
 					td.setAttribute( 'data-i', i );
 					td.setAttribute( 'data-col', col );
-					td.setAttribute( 'data-type', editableType );
+					td.setAttribute( 'data-type', _data.refSettings[_data.table[col].ref].editableType );
 					td.onmousedown = onTableFieldMouseDown;
 					let editableMark = document.createElement('div');
 					editableMark.className = 'dataTableEditableMark';
@@ -184,8 +119,106 @@ function drawTableContent( init=false, shiftOnly=false ) {
 					editableMark.innerHTML = '&#10000;';
 				}
 			}
+
+			let ref = _data.table[col].ref;
+			let content = _data.operations[i][ref];
+			drawTableTd( content, i, ref, td, tdTextNode )
 		}
 	}
+}
+
+
+function drawTableTd( content, i, ref, td=null, tdTextNode=null )
+{
+	if( td === null && _data.refSettings[ref].editableType === null ) { 	// Called not from drawTable - thus only after editing
+		return;
+	}
+	let col = _data.refSettings[ref].column;
+	let type = _data.refSettings[ref].type;
+	let format = _data.refSettings[ref].format;
+	if( td === null ) {
+		td = document.getElementById( 'tableColumn'+col+'Row'+i );
+	}
+	if( td === null ) 
+		return;
+	if( tdTextNode === null ) {
+		tdTextNode = td.firstChild;
+	}
+	if( tdTextNode === null )
+		return;	
+	let color = _data.operations[i].colorFont; // _settings.tableContentStrokeColor;
+	let fontStyle = 'normal';
+	let fontWeight = 'normal';
+	let backgroundColor = _data.operations[i].colorBack;
+	let textAlign = 'left';
+	if( 'userData' in _data.operations[i] ) { // If the value has been changed by user and not saved
+		if( ref in _data.operations[i].userData ) {
+			let bChanged = false;
+			if( _data.refSettings[ref].editableType === 'datetime' ) {
+				let d1 = parseDate(_data.operations[i].userData[ref]);
+				let d2 = parseDate(_data.operations[i][ref]);
+				if( d1.timeInSeconds !== d2.timeInSeconds ) {
+					bChanged=true;
+				}
+			} else if( _data.refSettings[ref].editableType === 'float' ) {
+				if( !(Math.abs(_data.operations[i].userData[ref] - _data.operations[i][ref]) < 10e-12) ) {
+					bChanged = true;
+				}
+			} else if( _data.operations[i].userData[ref] != _data.operations[i][ref] ) {
+				bChanged = true;
+			} 
+			if( bChanged ) {
+				fontStyle = "italic";
+				fontWeight = "bold";
+			}
+			content = _data.operations[i].userData[ref];
+		}
+	}
+	if( typeof(content) === 'undefined' ) {
+		content = '';
+	} else if( content === null ) {
+		content = '';
+	}
+
+	if( ref === "Level" ) { // To display no 'teams' or 'assignments' (phases only). 
+		if( typeof(content) === 'string' ) {
+			content = "";
+		}
+	}
+	if( ref === 'Name' ) { // A name should be adjusted according to it position in the hierarchy
+		content = spacesToPadNameAccordingToHierarchy(_data.operations[i].parents.length) + content; 
+		if( typeof(_data.operations[i].Level) === 'number' ) { // If it is a phase...
+			fontWeight = 'bold'; // ... making it bold.
+		}
+	} else {
+		if( type === 'float' || type === 'int' ) {
+			if( type === 'float' ) {
+				value = parseFloat( content );
+				if( !isNaN(value) ) {
+					content = value.toFixed( format ); // For float values "format" stands for the radix.
+				}
+			}							
+			textAlign = 'right';
+		} else if( type === 'string' || type === 'text' ) { // For strings "format" stands for alignment
+			if( format == 1 ) { // Align right
+				textAlign = 'right';							
+			} else if ( format == 2 ) {
+				textAlign = 'center';														
+			}
+		} else if( type === 'datetime' ) {
+			content = adjustDateTimeToFormat( content, format );
+		} else if( type === 'signal' ) { // Signals require being 'centered'
+			color = _settings.tableContentStrokeColor;						
+		}
+	}
+	if( type === 'signal' ) {
+		content = '&#9679';
+	}
+	tdTextNode.innerHTML = content;
+	td.style.color = _data.operations[i].colorFont; // _settings.tableContentStrokeColor;
+	td.style.fontStyle = fontStyle;
+	td.style.fontWeight = fontWeight;
+	td.style.textAlign = textAlign;
 }
 
 
@@ -196,22 +229,24 @@ function writeNewValueFromInputElemIntoTable( inputElemValue, i, ref ) {
 	let type = _data.refSettings[ref].type;
 	let format = _data.refSettings[ref].format;
 
-	let destElem = document.getElementById( 'tableColumn'+col+'Row'+i );
+	let destTd = document.getElementById( 'tableColumn'+col+'Row'+i );
+	if( !destTd ) 
+		return;
+	let destElem = destTd.firstChild;
+	if( !destElem )
+		return;	
 
-	let updated;
 	if( _data.operations[i][ref] != inputElemValue ) {
 		destElem.setAttributeNS( null, 'font-style', "italic" );
 		destElem.setAttributeNS( null, 'font-weight', "bold" );
-		updated = ''; //updated = '✎';
 	} else { // If user re-entered the old value
 		destElem.setAttributeNS( null, 'font-style', "normal" );										
 		destElem.setAttributeNS( null, 'font-weight', "normal" );
-		updated = '';
 	}
 
 	if( ref === 'Name') { 	// Shifting according to hierarchy if it is a name
 		let hrh = _data.operations[i].parents.length;
-		destElem.innerHTML = updated + spacesToPadNameAccordingToHierarchy(hrh) + inputElemValue;
+		destElem.innerHTML = spacesToPadNameAccordingToHierarchy(hrh) + inputElemValue;
 	}
 	else { 
 		if( type === 'float' ) {
@@ -223,7 +258,7 @@ function writeNewValueFromInputElemIntoTable( inputElemValue, i, ref ) {
 		else if( type === 'datetime' ) {
 			inputElemValue = adjustDateTimeToFormat( inputElemValue, format );
 		}				
-		destElem.innerHTML = updated + inputElemValue;
+		destElem.innerHTML = inputElemValue;
 	}
 }
 

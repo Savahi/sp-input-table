@@ -218,7 +218,9 @@ function displayEditBoxWithData( id ) {
 					valueToSet = adjustDateTimeToFullFormat( valueToSet );
 				}
 				elem.value = valueToSet;
-			}				
+			} else {
+				elem.value = '';
+			}
 
 			if( ref === 'Start' || ref === 'Fin' ) { // If this is a "Start" or "Fin" field changed, recalculation of several other ones is required...
 				elem.onblur = function(e) {
@@ -344,17 +346,10 @@ function saveUserDataFromEditBox() {
 					for( let iE = 0 ; iE < _data.editables.length ; iE++ ) { // For all editable fields in the table...
 						let ref = _data.editables[iE].ref;
 						let elem = document.getElementById( 'editBoxInput' + ref ); // ... retrieving the element that stores a new value.
+						//_data.operations[i].userData[ ref ] = elem.value; // Reading the value (possibly) changed.
+						//writeNewValueFromInputElemIntoTable( elem.value, i, ref );							
 						_data.operations[i].userData[ ref ] = elem.value; // Reading the value (possibly) changed.
-						writeNewValueFromInputElemIntoTable( elem.value, i, ref );								
-						
-						/*
-						for( let col = 0 ; col < _data.table.length ; col++ ) { // Changing the value in the table...
-							if( _data.table[col].ref == ref ) {
-								writeNewValueFromInputElemIntoTable( elem.value, i, ref );								
-								break;
-							}
-						}
-						*/
+						drawTableTd( elem.value, i, ref );
 					}
 			        hideEditBox();
 					ifSynchronizedCheck();

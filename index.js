@@ -285,7 +285,12 @@ function initData() {
 	// Creating ref-type array and attaching it to the "data"
 	_data.refSettings = {};
 	for( let col = 0 ; col < _data.table.length ; col++ ) {
-		let o = { column: col, type: _data.table[col].type, format: _data.table[col].format, name: _data.table[col].name };
+		let o = { column: col, type: _data.table[col].type, format: _data.table[col].format, name: _data.table[col].name, editableType: null };
+		for( let ie = 0 ; ie < _data.editables.length ; ie++ ) { 	// Is editable?
+			if( _data.editables[ie].ref === _data.table[col].ref ) {
+				o.editableType = _data.editables[ie].type;
+			}
+		}
 		_data.refSettings[ _data.table[col].ref ] = o;
 	}
 
